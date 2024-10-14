@@ -6,18 +6,18 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { ThumbsUp, ThumbsDown, Send } from 'lucide-react'
 import { logo } from '@/assets'
 // Simulating API call
-const mockApiResponse = async (message) => {
-  const API=import.meta.env.VITE_API_URL
+const apiResponse = async (message,sessionId) => {
+  const response_API=import.meta.env.VITE_API_URL
   // console.log(API)
-  await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate network delay
+  // await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate network delay
   // const data={answer:`This is a mock response to: "${message}"`,sessionId:"123456"}
   // return data 
-  const response = await fetch(API, {
+  const response = await fetch(response_API, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ question: message , enableGaurdrails:true})
+    body: JSON.stringify({ question: message , enableGaurdrails:true,sessionId: sessionId})
   })
 
   if (!response.ok) {
@@ -30,6 +30,32 @@ const mockApiResponse = async (message) => {
   return parsedBody;
 }
 
+const submitFeedback = async (feedbackData) => {
+  console.log(feedbackData)
+  const feedback_API = import.meta.env.VITE_FEEDBACK_API_URL
+  try {
+    const response = await fetch(feedback_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(feedbackData)
+    })
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok')
+    }
+
+    const data = await response.json()
+    console.log('Feedback submitted successfully:', data)
+    return data
+  } catch (error) {
+    console.error('Error submitting feedback:', error)
+    throw error
+  }
+}
+
+
 const FeedbackForm = ({ messageId, onSubmit, onClose }) => {
   const [feedback, setFeedback] = useState('')
 
@@ -39,7 +65,7 @@ const FeedbackForm = ({ messageId, onSubmit, onClose }) => {
       onClose();
       return;
     }
-    onSubmit(messageId, feedback)
+    onSubmit(messageId ,feedback)
     onClose()
   }
 
@@ -66,7 +92,7 @@ export default function Chatbot() {
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef(null)
   const [shouldScroll, setShouldScroll] = useState(false)
-
+  const [sessionId, setSessionId] = useState("");
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -93,10 +119,11 @@ export default function Chatbot() {
     setMessages(prevMessages => [...prevMessages, { id: loadingId, sender: 'bot', text: null, isLoading: true }])
 
     try {
-      const botResponse = await mockApiResponse(input)
+      const botResponse = await apiResponse(input,sessionId)
       const botMessage = { id: Date.now() + 1, text: botResponse.answer, sender: 'bot',sessionId:botResponse.sessionId }
       setMessages(prevMessages => prevMessages.filter(msg => msg.id !== loadingId))
       setMessages(prev => [...prev, botMessage])
+      setSessionId(botResponse.sessionId)
       setShouldScroll(true)
     } catch (error) {
       console.error('Error fetching response:', error)
@@ -124,10 +151,33 @@ export default function Chatbot() {
     setFeedbackMessageId(messageId)
   }
 
-  const handleFeedbackSubmit = (messageId, feedback) => {
+  const handleFeedbackSubmit = async (messageId, additionalFeedback) => {
+    const botMessage = messages.find(msg => msg.id === messageId)
+    const userMessage = messages[messages.findIndex(msg => msg.id === messageId) - 1]
 
-    console.log(`Feedback for message ${messageId}: ${feedback}`)
-    // Here you would typically send this feedback to your backend
+    if (!botMessage || !userMessage) {
+      console.error('Could not find corresponding messages for feedback')
+      return
+    }
+
+    const feedbackData = {
+      feedback_id: messageId.toString(),
+      user_input: userMessage.text,
+      llm_response: botMessage.text,
+      feedback: botMessage.liked ? "1" : botMessage.disliked ? "0" : "",
+      additional_feedback: additionalFeedback
+    }
+
+    try {
+      await submitFeedback(feedbackData)
+      console.log('Feedback submitted successfully')
+      // You might want to update the UI to show that feedback was submitted successfully
+    } catch (error) {
+      console.error('Failed to submit feedback:', error)
+      // You might want to show an error message to the user
+    }
+
+    // setFeedbackMessageId(null)
   }
   const handleFeedbackClose=()=>{
     setFeedbackMessageId(null)
