@@ -163,7 +163,20 @@ export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const maxLength = 500;
 
-  const toggleCard = () => setIsOpen(!isOpen);
+  // const toggleCard = () => {
+  //   setIsOpen(!isOpen);
+  //   window.parent.postMessage('openBot', '*');
+  // }
+  const OpenBot= () => {
+    setIsOpen(true);
+    window.parent.postMessage('openBot', '*');
+  }
+  const closeBot= () => {
+    setIsOpen(false);
+    window.parent.postMessage('closeBot', '*');
+  }
+  
+  
 
   const handleInputChange = (e) => {
     const value = e.target.value
@@ -312,10 +325,10 @@ export default function Chatbot() {
   };
 
   return (
-    <div className="fixed bottom-0 right-0 flex flex-col items-end w-full max-w-md ">
+    <div className={`fixed bottom-0 right-0 flex flex-col items-end ${isOpen?"w-full":""} max-w-md`}>
      { isOpen && <Card
         // className={" w-full max-w-md mx-auto transition-all duration-300 ease-in-out h-[100vh] max-h-[500px] flex flex-col"}
-        className={" w-full max-w-md mx-auto transition-all duration-300 ease-in-out h-[100vh] max-h-[500px] flex flex-col"}
+        className={" w-full max-w-md mx-auto transition-all duration-300 ease-in-out h-[500px] max-h-[500px] flex flex-col"}
 
       >
         <CardHeader className="bg-primary text-white flex flex-row p-4 rounded-t-lg bg-gradient-to-r from-[#49218E] to-[#43ADC4] shrink-0">
@@ -326,7 +339,7 @@ export default function Chatbot() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleCard}
+            onClick={closeBot}
             aria-label="Close bot assistant"
             id="close"
             className="hover:bg-[#2e7e90] hover:text-white transition-colors duration-200"
@@ -445,7 +458,7 @@ export default function Chatbot() {
         variant="outline"
         size="icon"
         className="rounded-full h-12 w-12 bg-[#FE2121] text-primary-foreground hover:bg-[#a12f2f] hover:text-primary-foreground shadow-lg mt-1"
-        onClick={toggleCard}
+        onClick={OpenBot}
         aria-label={"Close bot assistant"}
       >
         <Bot className="h-6 w-6" />
